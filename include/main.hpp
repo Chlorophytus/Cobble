@@ -3,7 +3,6 @@
 // Auto-generated configuration is included
 #include "configuration.hpp"
 
-// All of the C++ standard library is included
 #include <cstdint>
 
 /// @brief Unsigned 8-bit integer scalar

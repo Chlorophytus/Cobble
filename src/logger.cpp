@@ -8,12 +8,12 @@ using namespace cobble;
 static std::unique_ptr<logger::logger_list> ptr_loggers{nullptr};
 
 void format_timestamp(std::stringstream &format) {
-  constexpr auto BUFFER_SIZE = 128;
+  constexpr auto BUFFER_SIZE = 256;
   format << "[";
   auto t = std::chrono::system_clock::now();
   auto t_time = std::chrono::system_clock::to_time_t(t);
   char t_buffer[BUFFER_SIZE]{0};
-  std::strftime(t_buffer, BUFFER_SIZE - 1, "%T", std::localtime(&t_time));
+  std::strftime(t_buffer, BUFFER_SIZE - 1, "%F %T", std::localtime(&t_time));
   auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                     t.time_since_epoch())
                     .count() %
@@ -67,7 +67,7 @@ void logger::stdout_listener::_prelude(std::string &s,
     break;
   }
   case logger::severity::debug: {
-    format << "\033[0m [ 7 | DEBUG ] ";
+    format << "\033[0m[ 7 | DEBUG ] ";
     break;
   }
   }

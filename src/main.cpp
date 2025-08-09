@@ -2,8 +2,10 @@
 #include "../include/environment.hpp"
 #include "../include/exception_handler.hpp"
 #include "../include/logger.hpp"
+#include "../include/server.hpp"
 #include <cstdlib>
 #include <exception>
+#include <stdexcept>
 using namespace cobble;
 
 int main(int argc, char **argv) {
@@ -13,15 +15,17 @@ int main(int argc, char **argv) {
         new logger::file_listener("console.log"));
     logger::log(logger::severity::notice, "Cobble v", Cobble_VSTRING_FULL);
 
-    if(argc < 2) {
-      throw std::runtime_error{"Need to specify a TOML configuration file"};
+    if (argc < 2) {
+      throw std::runtime_error{"Please pass a TOML configuration file"};
     }
 
     environment::configuration config = environment::load(argv[1]);
+    server::start(config);
 
     return EXIT_SUCCESS;
   } catch (const std::exception &e) {
-    logger::log(logger::severity::emergency, "/!\\ Terminating, stacktrace is below... /!\\");
+    logger::log(logger::severity::emergency,
+                "Terminating, stacktrace is below");
     exception_handler::print_nested(e);
 
     return EXIT_FAILURE;

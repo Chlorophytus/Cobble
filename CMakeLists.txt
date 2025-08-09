@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project instantiation
-project(Cobble VERSION 0.1.0.1)
+project(Cobble VERSION 0.1.0.2)
 
 # Configure the project header
 configure_file(include/configuration.txt
@@ -18,11 +18,14 @@ find_package(Doxygen)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TomlPlusPlus REQUIRED tomlplusplus)
 
+find_package(Boost REQUIRED)
+
 # Build our main executable
 add_executable(${PROJECT_NAME}
     src/logger.cpp
     src/exception_handler.cpp
     src/environment.cpp
+    src/server.cpp
     src/main.cpp)
 
 # Use C++23 on target too
@@ -31,6 +34,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 
 # Include headers here
 target_include_directories(${PROJECT_NAME} PRIVATE 
+    ${Boost_INCLUDE_DIRS}
     ${TomlPlusPlus_INCLUDE_DIRS}
     include)
 
@@ -40,4 +44,4 @@ add_custom_target(docs
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Finally link
-target_link_libraries(${PROJECT_NAME} ${TomlPlusPlus_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${TomlPlusPlus_LIBRARIES})
