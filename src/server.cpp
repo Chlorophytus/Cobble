@@ -1,4 +1,5 @@
 #include "../include/server.hpp"
+#include "../include/exception_handler.hpp"
 #include "../include/logger.hpp"
 #include "../include/server_gen.hpp"
 #include <boost/asio.hpp>
@@ -21,7 +22,7 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
   try {
     for (;;) {
       // set timeout
-      stream.expires_after(std::chrono::seconds(3));
+      stream.expires_after(std::chrono::seconds(1));
 
       // HTTP requests require a read of headers
       boost::beast::http::request<boost::beast::http::string_body> request;
@@ -29,7 +30,7 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
 
       // handle request
       boost::beast::http::message_generator message =
-          server_gen::handle(std::move(request));
+          server_gen::handle(std::move(request), peer_ip, peer_port);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();
@@ -39,25 +40,29 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
                                          boost::asio::use_awaitable);
 
       if (!is_keepalive) {
+        logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                    " done with sending");
         break;
       }
     }
   } catch (boost::system::system_error &e) {
     const auto code = e.code();
 
+    if (code == boost::asio::error::operation_aborted) {
+      // https://github.com/boostorg/beast/issues/2145#issuecomment-755445748
+      logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                  " probably did not close their connection on time, "
+                  "disconnecting anyway");
+      co_return;
+    }
+
     if (code != boost::beast::http::error::end_of_stream) {
-      if (code == boost::beast::error::timeout) {
-        logger::log(logger::severity::warning, peer_ip, ":", peer_port,
-                    " timed out on a request");
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
   logger::log(logger::severity::debug, peer_ip, ":", peer_port, " disconnects");
-  boost::beast::error_code ec;
-  stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+  stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send);
 }
 
 boost::asio::awaitable<void>
@@ -76,29 +81,55 @@ do_listen(boost::asio::ip::tcp::endpoint endpoint) {
         do_session(tcp_stream{co_await acceptor.async_accept()}),
         [](std::exception_ptr e) {
           if (e) {
-            std::rethrow_exception(e);
+            try {
+              std::rethrow_exception(e);
+            } catch (std::exception &e) {
+              logger::log(logger::severity::error,
+                          "Error in session, dumping stacktrace");
+              exception_handler::print_nested(e);
+            }
           }
         });
   }
 }
 
-void server::start(const environment::configuration &config) {
+void server::start(const environment::configuration &config,
+                   std::atomic<bool> &run) {
+  logger::log(logger::severity::notice, "Spinning up server with ",
+              config.threads, " threads...");
   boost::asio::io_context io_context{config.threads};
 
-  boost::asio::co_spawn(io_context,
-                        do_listen(boost::asio::ip::tcp::endpoint{
-                            config.listen_address, config.listen_port}),
-                        [](std::exception_ptr e) {
-                          if (e) {
-                            std::rethrow_exception(e);
-                          }
-                        });
+  boost::asio::co_spawn(
+      io_context,
+      do_listen(boost::asio::ip::tcp::endpoint{config.listen_address,
+                                               config.listen_port}),
+      [&io_context](std::exception_ptr e) {
+        if (e) {
+          try {
+            std::rethrow_exception(e);
+          } catch (std::exception &e) {
+            logger::log(logger::severity::error,
+                        "Error in acceptor, dumping stacktrace");
+            exception_handler::print_nested(e);
+          }
+        }
+      });
 
   std::vector<std::thread> thread_pool{};
   thread_pool.reserve(config.threads - 1);
 
   for (auto thr = config.threads - 1; thr > 0; --thr) {
-    thread_pool.emplace_back([&io_context] { io_context.run(); });
+    thread_pool.emplace_back([&io_context] {
+      io_context.run();
+    });
   }
-  io_context.run();
+  while (run) {
+    io_context.poll();
+  }
+  io_context.stop();
+  
+  logger::log(logger::severity::informational, "Waiting for server to spin down...");
+  for(auto &&thr : thread_pool) {
+    thr.join();
+  }
 }

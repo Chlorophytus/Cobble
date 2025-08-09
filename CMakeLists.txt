@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project instantiation
-project(Cobble VERSION 0.1.0.2)
+project(Cobble VERSION 0.1.0.3)
 
 # Configure the project header
 configure_file(include/configuration.txt
@@ -17,8 +17,9 @@ find_package(Doxygen)
 # Find what we need
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TomlPlusPlus REQUIRED tomlplusplus)
+pkg_check_modules(JsonCpp REQUIRED jsoncpp)
 
-find_package(Boost REQUIRED)
+find_package(Boost CONFIG)
 
 # Build our main executable
 add_executable(${PROJECT_NAME}
@@ -36,6 +37,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${Boost_INCLUDE_DIRS}
     ${TomlPlusPlus_INCLUDE_DIRS}
+    ${JsonCpp_INCLUDE_DIRS}
     include)
 
 # You can make documentation this way
@@ -44,4 +46,7 @@ add_custom_target(docs
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Finally link
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${TomlPlusPlus_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+    ${Boost_LIBRARIES}
+    ${TomlPlusPlus_LIBRARIES}
+    ${JsonCpp_LIBRARIES})

@@ -3,6 +3,7 @@
 #include "main.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
+#include <json/json.h>
 namespace cobble {
 /// @brief Handles HTTP message generation
 namespace server_gen {
@@ -14,101 +15,166 @@ namespace server_gen {
 template <class Body, class Allocator>
 boost::beast::http::message_generator
 handle(boost::beast::http::request<
-       Body, boost::beast::http::basic_fields<Allocator>> &&request) {
+           Body, boost::beast::http::basic_fields<Allocator>> &&request,
+       const std::string &peer_ip, const U16 peer_port) {
   // 400 bad request
-  const auto bad_request = [&request](std::string_view reason) {
+  const auto bad_request = [&request, &peer_ip,
+                            &peer_port](std::string_view reason) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::bad_request, request.version()};
 
+    logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                " returns HTTP 400");
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
+    response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
-    response.body() = std::string(reason);
+
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = false;
+    root["code"] = "BAD_REQUEST";
+    root["reason"] = std::string(reason);
+    response.body() = Json::writeString(builder, root);
 
     response.prepare_payload();
     return response;
   };
   // 401 unauthorized
-  const auto unauthorized = [&request](std::string_view where) {
+  const auto unauthorized = [&request, &peer_ip,
+                             &peer_port](std::string_view where) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::unauthorized, request.version()};
+    logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                " returns HTTP 401");
 
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
+    response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
-    response.body() = "You are not authorized to access the resource '" +
-                      std::string(where) + "'.";
+
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = false;
+    root["code"] = "UNAUTHORIZED";
+    root["resource"] = std::string(where);
+    response.body() = Json::writeString(builder, root);
 
     response.prepare_payload();
     return response;
   };
   // 403 forbidden
-  const auto forbidden = [&request](std::string_view where) {
+  const auto forbidden = [&request, &peer_ip,
+                          &peer_port](std::string_view where) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::forbidden, request.version()};
+    logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                " returns HTTP 403");
 
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
+    response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
-    response.body() = "You are forbidden from accessing the resource '" +
-                      std::string(where) + "'.";
+
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = false;
+    root["code"] = "FORBIDDEN";
+    root["resource"] = std::string(where);
+    response.body() = Json::writeString(builder, root);
 
     response.prepare_payload();
     return response;
   };
   // 404 not found
-  const auto not_found = [&request](std::string_view where) {
+  const auto not_found = [&request, &peer_ip,
+                          &peer_port](std::string_view where) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::not_found, request.version()};
+    logger::log(logger::severity::debug, peer_ip, ":", peer_port,
+                " returns HTTP 404");
 
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
+    response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
-    response.body() = "Could not find resource '" + std::string(where) + "'.";
+
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = false;
+    root["code"] = "NOT_FOUND";
+    root["resource"] = std::string(where);
+    response.body() = Json::writeString(builder, root);
 
     response.prepare_payload();
     return response;
   };
   // 500 internal server error
-  const auto server_error = [&request](std::string_view what) {
+  const auto server_error = [&request, &peer_ip,
+                             &peer_port](std::string_view what) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::internal_server_error, request.version()};
+    logger::log(logger::severity::warning, peer_ip, ":", peer_port,
+                " returns HTTP 500");
 
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
+    response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
-    response.body() =
-        "The server encountered an internal error: " + std::string(what) + ".";
+
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = false;
+    root["code"] = "SERVER_ERROR";
+    root["reason"] = std::string(what);
+    response.body() = Json::writeString(builder, root);
 
     response.prepare_payload();
     return response;
   };
 
-  // A message response body
-  const std::string body{"Hello, C++\r\n"};
-  const auto size = body.size();
-  const auto method = request.method();
+  const auto target = request.target();
+    logger::log(logger::severity::debug, peer_ip, ":", peer_port, " reads '", target, "' ", request.method_string());
 
-  switch (method) {
-  case boost::beast::http::verb::head: {
-    boost::beast::http::response<boost::beast::http::empty_body> response{
-        boost::beast::http::status::ok, request.version()};
-    response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
-    response.content_length(size);
-    response.keep_alive(request.keep_alive());
-    return response;
-  }
-  default: {
-    boost::beast::http::response<boost::beast::http::string_body> response{
-        boost::beast::http::status::ok, request.version()};
-    response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(boost::beast::http::field::content_type, "text/html");
-    response.body() = body;
-    response.content_length(size);
-    response.keep_alive(request.keep_alive());
-    return response;
-  }
+  if (target == "/") {
+    // A message response body
+    const std::string body{"Hello, C++\r\n"};
+    const auto method = request.method();
+    switch (method) {
+    case boost::beast::http::verb::head: {
+      boost::beast::http::response<boost::beast::http::empty_body> response{
+          boost::beast::http::status::ok, request.version()};
+      response.set(boost::beast::http::field::server,
+                   BOOST_BEAST_VERSION_STRING);
+      response.set(boost::beast::http::field::content_type, "text/html");
+      response.keep_alive(request.keep_alive());
+
+      response.prepare_payload();
+      return response;
+    }
+    case boost::beast::http::verb::get: {
+      boost::beast::http::response<boost::beast::http::string_body> response{
+          boost::beast::http::status::ok, request.version()};
+      response.set(boost::beast::http::field::server,
+                   BOOST_BEAST_VERSION_STRING);
+      response.set(boost::beast::http::field::content_type, "text/html");
+      response.body() = body;
+      response.keep_alive(request.keep_alive());
+
+      response.prepare_payload();
+      return response;
+    }
+    default: {
+      return bad_request("Bad HTTP request type");
+    }
+    }
+  } else {
+    return not_found(target);
   }
 }
 } // namespace server_gen

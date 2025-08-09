@@ -3,10 +3,14 @@
 #include "../include/exception_handler.hpp"
 #include "../include/logger.hpp"
 #include "../include/server.hpp"
+#include <csignal>
 #include <cstdlib>
 #include <exception>
 #include <stdexcept>
 using namespace cobble;
+std::atomic<bool> run;
+
+void signal_handler(int signal) { run = false; }
 
 int main(int argc, char **argv) {
   try {
@@ -19,9 +23,17 @@ int main(int argc, char **argv) {
       throw std::runtime_error{"Please pass a TOML configuration file"};
     }
 
+    run = true;
     environment::configuration config = environment::load(argv[1]);
-    server::start(config);
 
+    logger::log(
+        logger::severity::notice,
+        "Hooking SIGINT, press Ctrl-C to gracefully shut down the server");
+
+    std::signal(SIGINT, signal_handler);
+    server::start(config, run);
+
+    logger::log(logger::severity::notice, "Server shut down gracefully");
     return EXIT_SUCCESS;
   } catch (const std::exception &e) {
     logger::log(logger::severity::emergency,
