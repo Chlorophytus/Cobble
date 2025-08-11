@@ -24,10 +24,12 @@ environment::load(const std::filesystem::path &where) {
   config.listen_port = listen_port_candidate;
 
   S64 threads_candidate = *table["http"]["threads"].value<S64>();
-  if(threads_candidate < 1) {
+  if (threads_candidate < 1) {
     throw std::runtime_error{"I/O context threads count must be above zero"};
   }
   config.threads = threads_candidate;
+
+  config.cors = *table["http"]["cors_origin"].value<std::string>();
 
   return config;
 }

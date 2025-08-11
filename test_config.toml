@@ -9,3 +9,4 @@ directory = "/tmp/cobble/" # Change this to a real storage directory.
 listen = "127.0.0.1"
 port = 8080
 threads = 8
+cors_origin = "http://127.0.0.1:5173"

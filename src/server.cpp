@@ -5,9 +5,12 @@
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <chrono>
+#include <cstdlib>
 #include <thread>
 #include <vector>
 using namespace cobble;
+
+static std::string cors{};
 
 using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
     boost::asio::use_awaitable_t<>::executor_with_default<
@@ -30,7 +33,7 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
 
       // handle request
       boost::beast::http::message_generator message =
-          server_gen::handle(std::move(request), peer_ip, peer_port);
+          server_gen::handle(std::move(request), cors, peer_ip, peer_port);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();
@@ -97,6 +100,7 @@ void server::start(const environment::configuration &config,
                    std::atomic<bool> &run) {
   logger::log(logger::severity::notice, "Spinning up server with ",
               config.threads, " threads...");
+  cors = config.cors;
   boost::asio::io_context io_context{config.threads};
 
   boost::asio::co_spawn(
@@ -119,17 +123,16 @@ void server::start(const environment::configuration &config,
   thread_pool.reserve(config.threads - 1);
 
   for (auto thr = config.threads - 1; thr > 0; --thr) {
-    thread_pool.emplace_back([&io_context] {
-      io_context.run();
-    });
+    thread_pool.emplace_back([&io_context] { io_context.run(); });
   }
   while (run) {
     io_context.poll();
   }
   io_context.stop();
-  
-  logger::log(logger::severity::informational, "Waiting for server to spin down...");
-  for(auto &&thr : thread_pool) {
+
+  logger::log(logger::severity::informational,
+              "Waiting for server to spin down...");
+  for (auto &&thr : thread_pool) {
     thr.join();
   }
 }

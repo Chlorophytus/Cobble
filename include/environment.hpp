@@ -3,6 +3,7 @@
 #include "main.hpp"
 #include <boost/asio.hpp>
 #include <filesystem>
+#include <string>
 #include <toml++/toml.hpp>
 namespace cobble {
 /// @brief Handles configuration via a TOML file
@@ -17,6 +18,9 @@ struct configuration {
 
   /// @brief How many threads the server I/O context uses
   S32 threads;
+
+  /// @brief The CORS origin
+  std::string cors;
 };
 
 /// @brief Load a TOML configuration, throws an error if invalid

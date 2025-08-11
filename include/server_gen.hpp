@@ -18,14 +18,15 @@ template <class Body, class Allocator>
 boost::beast::http::message_generator
 handle(boost::beast::http::request<
            Body, boost::beast::http::basic_fields<Allocator>> &&request,
-       const std::string &peer_ip, const U16 peer_port) {
+       const std::string &cors, const std::string &peer_ip,
+       const U16 peer_port) {
   // 500 internal server error
-  const auto server_error = [&request, &peer_ip, &peer_port]() {
+  const auto server_error = [&request, &peer_ip, &peer_port, &cors]() {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::internal_server_error, request.version()};
     logger::log(logger::severity::warning, peer_ip, ":", peer_port,
                 " returns HTTP 500");
-
+    response.set(boost::beast::http::field::access_control_allow_origin, cors);
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
@@ -43,12 +44,13 @@ handle(boost::beast::http::request<
   };
   // 400 bad request
   const auto bad_request = [&request, &peer_ip,
-                            &peer_port](std::string_view reason) {
+                            &peer_port, &cors](std::string_view reason) {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::bad_request, request.version()};
 
     logger::log(logger::severity::debug, peer_ip, ":", peer_port,
                 " returns HTTP 400");
+    response.set(boost::beast::http::field::access_control_allow_origin, cors);
     response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     response.set(boost::beast::http::field::content_type, "application/json");
     response.keep_alive(request.keep_alive());
@@ -73,13 +75,15 @@ handle(boost::beast::http::request<
 
     logger::log(logger::severity::debug, peer_ip, ":", peer_port, " reads '",
                 target, "' ", request.method_string());
-    
+
     const auto method = request.method();
 
     switch (method) {
     case boost::beast::http::verb::head: {
       boost::beast::http::response<boost::beast::http::empty_body> response{
           boost::beast::http::status::ok, request.version()};
+      response.set(boost::beast::http::field::access_control_allow_origin,
+                   cors);
       response.set(boost::beast::http::field::server,
                    BOOST_BEAST_VERSION_STRING);
       response.set(boost::beast::http::field::content_type, "application/json");
@@ -93,6 +97,8 @@ handle(boost::beast::http::request<
 
       boost::beast::http::response<boost::beast::http::string_body> response{
           routed.status, request.version()};
+      response.set(boost::beast::http::field::access_control_allow_origin,
+                   cors);
       response.set(boost::beast::http::field::server,
                    BOOST_BEAST_VERSION_STRING);
       response.set(boost::beast::http::field::content_type, "application/json");

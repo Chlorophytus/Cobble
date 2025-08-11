@@ -21,7 +21,7 @@ struct response {
 /// @param query the query string map
 /// @return a response object
 response api_get(const std::filesystem::path &path,
-                    std::unordered_map<std::string, std::string> &&query);
+                 std::unordered_map<std::string, std::string> &&query);
 
 /// @brief Handle a POST request
 /// @param path the POST path
@@ -29,8 +29,8 @@ response api_get(const std::filesystem::path &path,
 /// @param body the JSON body
 /// @return a response object
 response api_post(const std::filesystem::path &path,
-                     std::unordered_map<std::string, std::string> &&query,
-                     Json::Value &&body);
+                  std::unordered_map<std::string, std::string> &&query,
+                  Json::Value &&body);
 } // namespace route
 } // namespace cobble
 #endif
