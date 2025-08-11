@@ -29,7 +29,5 @@ environment::load(const std::filesystem::path &where) {
   }
   config.threads = threads_candidate;
 
-  config.cors = *table["http"]["cors_origin"].value<std::string>();
-
   return config;
 }

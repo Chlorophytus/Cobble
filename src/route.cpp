@@ -20,15 +20,16 @@ const static std::unordered_map<
            return route::response{.status = boost::beast::http::status::ok,
                                   .body = root};
          }},
-        {std::filesystem::path{"/.well-known/version"},
+        {std::filesystem::path{"/page"},
          [](std::unordered_map<std::string, std::string> &&query) {
            Json::Value root;
 
            root["ok"] = true;
-           root["humanReadable"] = Cobble_VSTRING_FULL;
-           root["machineReadable"]["major"] = Cobble_VMAJOR;
-           root["machineReadable"]["minor"] = Cobble_VMINOR;
-           root["machineReadable"]["patch"] = Cobble_VPATCH;
+           root["version"]["readable"] = Cobble_VSTRING_FULL;
+           root["version"]["major"] = Cobble_VMAJOR;
+           root["version"]["minor"] = Cobble_VMINOR;
+           root["version"]["patch"] = Cobble_VPATCH;
+           root["videos"] = Json::arrayValue;
 
            return route::response{.status = boost::beast::http::status::ok,
                                   .body = root};

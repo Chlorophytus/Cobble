@@ -10,13 +10,15 @@
 #include <vector>
 using namespace cobble;
 
-static std::string cors{};
-
 using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
     boost::asio::use_awaitable_t<>::executor_with_default<
         boost::asio::any_io_executor>>::other;
 
 boost::asio::awaitable<void> do_session(tcp_stream stream) {
+  // initial handle time
+  std::chrono::high_resolution_clock::time_point t0 =
+      std::chrono::high_resolution_clock::now();
+
   const auto peer_ip = stream.socket().remote_endpoint().address().to_string();
   const auto peer_port = stream.socket().remote_endpoint().port();
   logger::log(logger::severity::debug, peer_ip, ":", peer_port, " connects");
@@ -32,8 +34,8 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
       co_await boost::beast::http::async_read(stream, buffer, request);
 
       // handle request
-      boost::beast::http::message_generator message =
-          server_gen::handle(std::move(request), cors, peer_ip, peer_port);
+      boost::beast::http::message_generator message = server_gen::handle(
+          std::move(request), peer_ip, peer_port, t0);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();
@@ -100,7 +102,6 @@ void server::start(const environment::configuration &config,
                    std::atomic<bool> &run) {
   logger::log(logger::severity::notice, "Spinning up server with ",
               config.threads, " threads...");
-  cors = config.cors;
   boost::asio::io_context io_context{config.threads};
 
   boost::asio::co_spawn(

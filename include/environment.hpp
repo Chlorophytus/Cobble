@@ -18,9 +18,6 @@ struct configuration {
 
   /// @brief How many threads the server I/O context uses
   S32 threads;
-
-  /// @brief The CORS origin
-  std::string cors;
 };
 
 /// @brief Load a TOML configuration, throws an error if invalid
