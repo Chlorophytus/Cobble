@@ -1,21 +1,33 @@
 #include "../include/query_string.hpp"
 #include "../include/logger.hpp"
-using namespace cobble;
 #include <exception>
 #include <forward_list>
+#include <numeric>
 #include <regex>
 #include <stdexcept>
+using namespace cobble;
 
 const static std::regex parse_path_query{R"(^([^&?]+)(?:\?([^?]*))?$)"};
 
 std::unordered_map<std::string, std::string>
-query_string::parse(const std::string &what, std::string &path) {
+query_string::parse(const std::string &what, std::filesystem::path &path) {
   std::unordered_map<std::string, std::string> parsed{};
   std::smatch path_matches;
 
   if (std::regex_search(what, path_matches, parse_path_query)) {
     // regex stuff, path and query splits here
-    path = path_matches[1].str();
+    auto raw_path = std::filesystem::path{path_matches[1].str()};
+
+    path =
+        std::accumulate(raw_path.begin(), raw_path.end(),
+                        std::filesystem::path{"/"}, [](auto obj, auto entry) {
+                          if (entry != "/" && entry != "") {
+                            return obj / entry;
+                          } else {
+                            return obj;
+                          }
+                        });
+
     std::string query = path_matches[2].str();
 
     // we don't need a vector

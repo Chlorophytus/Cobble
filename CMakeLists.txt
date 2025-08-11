@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project instantiation
-project(Cobble VERSION 0.1.0.4)
+project(Cobble VERSION 0.1.0.5)
 
 # Configure the project header
 configure_file(include/configuration.txt
@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
     src/exception_handler.cpp
     src/environment.cpp
     src/query_string.cpp
+    src/route.cpp
     src/server.cpp
     src/main.cpp)
 
