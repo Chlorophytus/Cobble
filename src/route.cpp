@@ -12,10 +12,6 @@ const static std::unordered_map<
            Json::Value root;
 
            root["ok"] = true;
-           for (auto &&kv : query) {
-             const auto [key, val] = kv;
-             root["query"][key] = val;
-           }
 
            return route::response{.status = boost::beast::http::status::ok,
                                   .body = root};
@@ -45,6 +41,7 @@ route::api_get(const std::filesystem::path &path,
 
     root["ok"] = false;
     root["code"] = "NOT_FOUND";
+    root["maintenanceMessage"] = "Please try again later";
     root["resource"] = path.string();
 
     return route::response{.status = boost::beast::http::status::not_found,

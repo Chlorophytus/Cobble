@@ -26,7 +26,7 @@ handle(boost::beast::http::request<
   std::chrono::high_resolution_clock::time_point t0 =
       std::chrono::high_resolution_clock::now();
   // 500 internal server error
-  const auto server_error = [&request, &peer_ip, &peer_port, &t0]() {
+  const auto server_error = [&request, &peer_ip, &peer_port, &t0] {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::internal_server_error, request.version()};
     logger::log(logger::severity::warning, peer_ip, ":", peer_port,
@@ -43,6 +43,7 @@ handle(boost::beast::http::request<
 
     root["ok"] = false;
     root["code"] = "SERVER_ERROR";
+    root["maintenanceMessage"] = "Please try again later";
     std::chrono::high_resolution_clock::time_point t1 =
         std::chrono::high_resolution_clock::now();
     root["responseTime"] =
@@ -54,8 +55,7 @@ handle(boost::beast::http::request<
     return response;
   };
   // 400 bad request
-  const auto bad_request = [&request, &peer_ip, &peer_port,
-                            &t0](std::string_view reason) {
+  const auto bad_request = [&request, &peer_ip, &peer_port, &t0] {
     boost::beast::http::response<boost::beast::http::string_body> response{
         boost::beast::http::status::bad_request, request.version()};
 
@@ -73,7 +73,7 @@ handle(boost::beast::http::request<
 
     root["ok"] = false;
     root["code"] = "BAD_REQUEST";
-    root["reason"] = std::string(reason);
+    root["maintenanceMessage"] = "Please try again later";
     std::chrono::high_resolution_clock::time_point t1 =
         std::chrono::high_resolution_clock::now();
     root["responseTime"] =
@@ -133,7 +133,7 @@ handle(boost::beast::http::request<
       return response;
     }
     default: {
-      return bad_request("Bad HTTP request type");
+      return bad_request();
     }
     }
   } catch (const std::exception &e) {

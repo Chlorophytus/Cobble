@@ -39,35 +39,35 @@ void logger::stdout_listener::_prelude(std::string &s,
   format_timestamp(format);
   switch (severity) {
   case logger::severity::emergency: {
-    format << "\033[35m[ 0 | EMERGENCY ]\033[0m ";
+    format << "\033[35m[ E0 | EMERGENCY ]\033[0m ";
     break;
   }
   case logger::severity::alert: {
-    format << "\033[31m[ 1 | ALERT ]\033[0m ";
+    format << "\033[31m[ E1 | ALERT ]\033[0m ";
     break;
   }
   case logger::severity::critical: {
-    format << "\033[31m[ 2 | CRITICAL ]\033[0m ";
+    format << "\033[31m[ E2 | CRITICAL ]\033[0m ";
     break;
   }
   case logger::severity::error: {
-    format << "\033[33m[ 3 | ERROR ]\033[0m ";
+    format << "\033[33m[ E3 | ERROR ]\033[0m ";
     break;
   }
   case logger::severity::warning: {
-    format << "\033[33m[ 4 | WARNING ]\033[0m ";
+    format << "\033[33m[ E4 | WARNING ]\033[0m ";
     break;
   }
   case logger::severity::notice: {
-    format << "\033[32m[ 5 | NOTICE ]\033[0m ";
+    format << "\033[32m[ E5 | NOTICE ]\033[0m ";
     break;
   }
   case logger::severity::informational: {
-    format << "\033[0m[ 6 | INFORMATIONAL ] ";
+    format << "\033[0m[ E6 | INFORMATIONAL ] ";
     break;
   }
   case logger::severity::debug: {
-    format << "\033[0m[ 7 | DEBUG ] ";
+    format << "\033[0m[ E7 | DEBUG ] ";
     break;
   }
   }
@@ -90,35 +90,35 @@ void logger::file_listener::_prelude(std::string &s,
   format_timestamp(format);
   switch (severity) {
   case logger::severity::emergency: {
-    format << "[ 0 | EMERGENCY ] ";
+    format << "[ E0 | EMERGENCY ] ";
     break;
   }
   case logger::severity::alert: {
-    format << "[ 1 | ALERT ] ";
+    format << "[ E1 | ALERT ] ";
     break;
   }
   case logger::severity::critical: {
-    format << "[ 2 | CRITICAL ] ";
+    format << "[ E2 | CRITICAL ] ";
     break;
   }
   case logger::severity::error: {
-    format << "[ 3 | ERROR ] ";
+    format << "[ E3 | ERROR ] ";
     break;
   }
   case logger::severity::warning: {
-    format << "[ 4 | WARNING ] ";
+    format << "[ E4 | WARNING ] ";
     break;
   }
   case logger::severity::notice: {
-    format << "[ 5 | NOTICE ] ";
+    format << "[ E5 | NOTICE ] ";
     break;
   }
   case logger::severity::informational: {
-    format << "[ 6 | INFORMATIONAL ] ";
+    format << "[ E6 | INFORMATIONAL ] ";
     break;
   }
   case logger::severity::debug: {
-    format << "[ 7 | DEBUG ] ";
+    format << "[ E7 | DEBUG ] ";
     break;
   }
   }
