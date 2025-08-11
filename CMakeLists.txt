@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project instantiation
-project(Cobble VERSION 0.1.0.7)
+project(Cobble VERSION 0.1.0.8)
 
 # Configure the project header
 configure_file(include/configuration.txt

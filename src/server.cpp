@@ -15,9 +15,6 @@ using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
         boost::asio::any_io_executor>>::other;
 
 boost::asio::awaitable<void> do_session(tcp_stream stream) {
-  // initial handle time
-  std::chrono::high_resolution_clock::time_point t0 =
-      std::chrono::high_resolution_clock::now();
 
   const auto peer_ip = stream.socket().remote_endpoint().address().to_string();
   const auto peer_port = stream.socket().remote_endpoint().port();
@@ -34,8 +31,8 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
       co_await boost::beast::http::async_read(stream, buffer, request);
 
       // handle request
-      boost::beast::http::message_generator message = server_gen::handle(
-          std::move(request), peer_ip, peer_port, t0);
+      boost::beast::http::message_generator message =
+          server_gen::handle(std::move(request), peer_ip, peer_port);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();

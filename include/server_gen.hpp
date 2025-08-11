@@ -16,14 +16,15 @@ namespace server_gen {
 /// @param request the HTTP request
 /// @param peer_ip The peer IP address
 /// @param peer_port The peer port
-/// @param t0 start time of loading
 /// @return a message response
 template <class Body, class Allocator>
 boost::beast::http::message_generator
 handle(boost::beast::http::request<
            Body, boost::beast::http::basic_fields<Allocator>> &&request,
-       const std::string &peer_ip, const U16 peer_port,
-       const std::chrono::high_resolution_clock::time_point &t0) {
+       const std::string &peer_ip, const U16 peer_port) {
+  // initial handle time
+  std::chrono::high_resolution_clock::time_point t0 =
+      std::chrono::high_resolution_clock::now();
   // 500 internal server error
   const auto server_error = [&request, &peer_ip, &peer_port, &t0]() {
     boost::beast::http::response<boost::beast::http::string_body> response{
@@ -124,7 +125,8 @@ handle(boost::beast::http::request<
       std::chrono::high_resolution_clock::time_point t1 =
           std::chrono::high_resolution_clock::now();
       routed.body["responseTime"] =
-          std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+          std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+              .count();
       response.body() = Json::writeString(builder, routed.body);
 
       response.prepare_payload();
