@@ -1,6 +1,7 @@
 #if !defined(COBBLE_SERVER_GEN)
 #define COBBLE_SERVER_GEN
 #include "main.hpp"
+#include "query_string.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <json/json.h>
@@ -141,9 +142,21 @@ handle(boost::beast::http::request<
   const auto target = request.target();
     logger::log(logger::severity::debug, peer_ip, ":", peer_port, " reads '", target, "' ", request.method_string());
 
-  if (target == "/") {
+  std::string target_path{};
+  const auto parsed = query_string::parse(target, target_path);
+  if (target_path == "/") {
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    builder.settings_["indentation"] = "";
+
+    root["ok"] = true;
+    root["query"] = Json::Value{};
+    for(auto &&kv : parsed) {
+      const auto [key, val] = kv;
+      root["query"][key] = val;
+    }
+
     // A message response body
-    const std::string body{"Hello, C++\r\n"};
     const auto method = request.method();
     switch (method) {
     case boost::beast::http::verb::head: {
@@ -151,7 +164,7 @@ handle(boost::beast::http::request<
           boost::beast::http::status::ok, request.version()};
       response.set(boost::beast::http::field::server,
                    BOOST_BEAST_VERSION_STRING);
-      response.set(boost::beast::http::field::content_type, "text/html");
+      response.set(boost::beast::http::field::content_type, "application/json");
       response.keep_alive(request.keep_alive());
 
       response.prepare_payload();
@@ -162,8 +175,8 @@ handle(boost::beast::http::request<
           boost::beast::http::status::ok, request.version()};
       response.set(boost::beast::http::field::server,
                    BOOST_BEAST_VERSION_STRING);
-      response.set(boost::beast::http::field::content_type, "text/html");
-      response.body() = body;
+      response.set(boost::beast::http::field::content_type, "application/json");
+      response.body() = Json::writeString(builder, root);
       response.keep_alive(request.keep_alive());
 
       response.prepare_payload();
@@ -174,7 +187,7 @@ handle(boost::beast::http::request<
     }
     }
   } else {
-    return not_found(target);
+    return not_found(target_path);
   }
 }
 } // namespace server_gen
