@@ -14,7 +14,8 @@ using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
     boost::asio::use_awaitable_t<>::executor_with_default<
         boost::asio::any_io_executor>>::other;
 
-boost::asio::awaitable<void> do_session(tcp_stream stream) {
+boost::asio::awaitable<void>
+do_session(tcp_stream stream, const environment::configuration &config) {
 
   const auto peer_ip = stream.socket().remote_endpoint().address().to_string();
   const auto peer_port = stream.socket().remote_endpoint().port();
@@ -31,8 +32,8 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
       co_await boost::beast::http::async_read(stream, buffer, request);
 
       // handle request
-      boost::beast::http::message_generator message =
-          server_gen::handle(std::move(request), peer_ip, peer_port);
+      boost::beast::http::message_generator message = server_gen::handle(
+          std::move(request), config, peer_ip, peer_port);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();
@@ -68,7 +69,8 @@ boost::asio::awaitable<void> do_session(tcp_stream stream) {
 }
 
 boost::asio::awaitable<void>
-do_listen(boost::asio::ip::tcp::endpoint endpoint) {
+do_listen(boost::asio::ip::tcp::endpoint endpoint,
+          const environment::configuration &config) {
   auto acceptor =
       boost::asio::use_awaitable.as_default_on(boost::asio::ip::tcp::acceptor(
           co_await boost::asio::this_coro::executor));
@@ -80,7 +82,7 @@ do_listen(boost::asio::ip::tcp::endpoint endpoint) {
   for (;;) {
     boost::asio::co_spawn(
         acceptor.get_executor(),
-        do_session(tcp_stream{co_await acceptor.async_accept()}),
+        do_session(tcp_stream{co_await acceptor.async_accept()}, config),
         [](std::exception_ptr e) {
           if (e) {
             try {
@@ -104,7 +106,8 @@ void server::start(const environment::configuration &config,
   boost::asio::co_spawn(
       io_context,
       do_listen(boost::asio::ip::tcp::endpoint{config.listen_address,
-                                               config.listen_port}),
+                                               config.listen_port},
+                config),
       [&io_context](std::exception_ptr e) {
         if (e) {
           try {
