@@ -162,7 +162,7 @@ handle(boost::beast::http::request<
       }
     }
 
-    if(!in_network) {
+    if (!in_network) {
       return unauthorized();
     }
 
@@ -177,41 +177,73 @@ handle(boost::beast::http::request<
 
     switch (method) {
     case boost::beast::http::verb::head: {
+      auto routed = route::api_head(config, target_path, std::move(parsed));
+
       boost::beast::http::response<boost::beast::http::empty_body> response{
           boost::beast::http::status::ok, request.version()};
       response.set(boost::beast::http::field::access_control_allow_origin,
                    request["origin"]);
       response.set(boost::beast::http::field::server,
                    BOOST_BEAST_VERSION_STRING);
-      response.set(boost::beast::http::field::content_type, "application/json");
+      response.set(boost::beast::http::field::content_type, routed.mime_type);
+      response.content_length(routed.size.value_or(0));
       response.keep_alive(request.keep_alive());
+      std::chrono::high_resolution_clock::time_point t1 =
+          std::chrono::high_resolution_clock::now();
+      response.set(
+          "X-Response-Time",
+          std::to_string(
+              std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+                  .count()));
 
-      response.prepare_payload();
       return response;
     }
     case boost::beast::http::verb::get: {
-      auto routed = route::api_get(target_path, std::move(parsed));
+      auto routed = route::api_get(config, target_path, std::move(parsed));
 
-      boost::beast::http::response<boost::beast::http::string_body> response{
-          routed.status, request.version()};
-      response.set(boost::beast::http::field::access_control_allow_origin,
-                   request["origin"]);
-      response.set(boost::beast::http::field::server,
-                   BOOST_BEAST_VERSION_STRING);
-      response.set(boost::beast::http::field::content_type, "application/json");
-      response.keep_alive(request.keep_alive());
+      if (std::holds_alternative<Json::Value>(routed.body)) {
+        auto &&body_json = std::get<Json::Value>(routed.body);
+        boost::beast::http::response<boost::beast::http::string_body> response{
+            routed.status, request.version()};
+        response.set(boost::beast::http::field::access_control_allow_origin,
+                     request["origin"]);
+        response.set(boost::beast::http::field::server,
+                     BOOST_BEAST_VERSION_STRING);
+        response.set(boost::beast::http::field::content_type, routed.mime_type);
+        response.keep_alive(request.keep_alive());
 
-      Json::StreamWriterBuilder builder;
-      builder.settings_["indentation"] = "";
-      std::chrono::high_resolution_clock::time_point t1 =
-          std::chrono::high_resolution_clock::now();
-      routed.body["responseTime"] =
-          std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
-              .count();
-      response.body() = Json::writeString(builder, routed.body);
-
-      response.prepare_payload();
-      return response;
+        Json::StreamWriterBuilder builder;
+        builder.settings_["indentation"] = "";
+        std::chrono::high_resolution_clock::time_point t1 =
+            std::chrono::high_resolution_clock::now();
+        body_json["responseTime"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+                .count();
+        response.body() = Json::writeString(builder, body_json);
+        response.prepare_payload();
+        return response;
+      } else {
+        auto &&body_file =
+            std::get<boost::beast::http::file_body::value_type>(routed.body);
+        boost::beast::http::response<boost::beast::http::file_body> response{
+            routed.status, request.version()};
+        response.set(boost::beast::http::field::access_control_allow_origin,
+                     request["origin"]);
+        response.set(boost::beast::http::field::server,
+                     BOOST_BEAST_VERSION_STRING);
+        response.set(boost::beast::http::field::content_type, routed.mime_type);
+        response.keep_alive(request.keep_alive());
+        response.body() = std::move(body_file);
+        std::chrono::high_resolution_clock::time_point t1 =
+            std::chrono::high_resolution_clock::now();
+        response.set(
+            "X-Response-Time",
+            std::to_string(
+                std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+                    .count()));
+        response.prepare_payload();
+        return response;
+      }
     }
     default: {
       return bad_request();

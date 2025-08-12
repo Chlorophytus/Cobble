@@ -15,6 +15,9 @@ environment::load(const std::filesystem::path &where) {
 
   table = toml::parse_file(where.string());
 
+  config.data_path = std::filesystem::path{
+      *table["storage"]["directory"].value<std::string>()};
+
   config.listen_address = boost::asio::ip::make_address(
       table["http"]["listen"].value<std::string>()->c_str());
 
@@ -39,8 +42,7 @@ environment::load(const std::filesystem::path &where) {
     auto cors_array6 = table["http"]["cors"]["origins"]["v6"].as_array();
     toml::array cors_array_entries6 = *cors_array6;
 
-    auto &&entries =
-        std::get<cidr_network_list>(config.cors_entries);
+    auto &&entries = std::get<cidr_network_list>(config.cors_entries);
     for (auto i = 0; i < cors_array_entries4.size(); i++) {
       auto v4 = cors_array_entries4[i].value<std::string>();
       if (v4) {

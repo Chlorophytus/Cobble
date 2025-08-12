@@ -1,9 +1,7 @@
 [storage]
 backend = "local"
 max_size = 25000000
-
-[storage.local]
-directory = "/tmp/cobble/" # Change this to a real storage directory.
+directory = "/tmp/cobble" # Change this to a real storage directory.
 
 [http]
 listen = "192.168.88.10"

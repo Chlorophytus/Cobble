@@ -21,6 +21,9 @@ struct cidr_network_list {
 
 /// @brief A configuration structure
 struct configuration {
+  /// @brief The path we use to store thumbnails and videos
+  std::filesystem::path data_path;
+
   /// @brief The IP address we listen with
   boost::asio::ip::address listen_address;
 
