@@ -66,12 +66,14 @@ response_get api_get(const environment::configuration &config,
 /// @param config environment configuration
 /// @param path the POST path
 /// @param query the query string map
-/// @param body the JSON body
+/// @param body the JSON or file body
 /// @return a response object
-response_post api_post(const environment::configuration &config,
-                       const std::filesystem::path &path,
-                       std::unordered_map<std::string, std::string> &&query,
-                       Json::Value &&body);
+response_post
+api_post(const environment::configuration &config,
+         const std::filesystem::path &path,
+         std::unordered_map<std::string, std::string> &&query,
+         std::variant<Json::Value, boost::beast::http::file_body::value_type>
+             &&body);
 } // namespace route
 } // namespace cobble
 #endif

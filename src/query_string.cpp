@@ -57,6 +57,12 @@ query_string::parse_only_query(const std::string &what) {
   for (const auto kv : query_kvs) {
     if (!kv.empty()) {
       const auto where = kv.find('=');
+
+      if(where == std::string::npos) {
+        // malformed query string key/value entry
+        continue;
+      }
+
       const auto key = kv.substr(0, where);
       const auto val = kv.substr(where + 1);
       parsed.insert_or_assign(key, val);
