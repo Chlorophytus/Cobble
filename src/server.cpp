@@ -32,8 +32,8 @@ do_session(tcp_stream stream, const environment::configuration &config) {
       co_await boost::beast::http::async_read(stream, buffer, request);
 
       // handle request
-      boost::beast::http::message_generator message = server_gen::handle(
-          std::move(request), config, peer_ip, peer_port);
+      boost::beast::http::message_generator message =
+          server_gen::handle(std::move(request), config, peer_ip, peer_port);
 
       // determines if connection is done
       bool is_keepalive = message.keep_alive();
@@ -85,13 +85,7 @@ do_listen(boost::asio::ip::tcp::endpoint endpoint,
         do_session(tcp_stream{co_await acceptor.async_accept()}, config),
         [](std::exception_ptr e) {
           if (e) {
-            try {
-              std::rethrow_exception(e);
-            } catch (std::exception &e) {
-              logger::log(logger::severity::error,
-                          "Error in session, dumping stacktrace");
-              exception_handler::print_nested(e);
-            }
+            std::rethrow_exception(e);
           }
         });
   }
@@ -110,13 +104,7 @@ void server::start(const environment::configuration &config,
                 config),
       [&io_context](std::exception_ptr e) {
         if (e) {
-          try {
-            std::rethrow_exception(e);
-          } catch (std::exception &e) {
-            logger::log(logger::severity::error,
-                        "Error in acceptor, dumping stacktrace");
-            exception_handler::print_nested(e);
-          }
+          std::rethrow_exception(e);
         }
       });
 
@@ -126,14 +114,26 @@ void server::start(const environment::configuration &config,
   for (auto thr = config.threads - 1; thr > 0; --thr) {
     thread_pool.emplace_back([&io_context] { io_context.run(); });
   }
-  while (run) {
-    io_context.poll();
-  }
-  io_context.stop();
 
-  logger::log(logger::severity::informational,
-              "Waiting for server to spin down...");
-  for (auto &&thr : thread_pool) {
-    thr.join();
+  // Stops all server threads
+  auto try_halt = [&io_context, &thread_pool]() {
+    io_context.stop();
+    logger::log(logger::severity::informational,
+                "Spinning down server...");
+    for (auto &&thr : thread_pool) {
+      thr.join();
+    }
+  };
+
+  try {
+    while (run) {
+      io_context.poll();
+    }
+  } catch (const std::exception &e) {
+    logger::log(logger::severity::error, "Error from a thread was caught, spinning down server");
+    try_halt();
+    std::throw_with_nested(std::runtime_error{"Server spun down ungracefully"});
   }
+
+  try_halt();
 }

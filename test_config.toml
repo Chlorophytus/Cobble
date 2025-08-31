@@ -4,7 +4,7 @@ max_size = 25000000
 directory = "/tmp/cobble" # Change this to a real storage directory.
 
 [http]
-listen = "192.168.88.10"
+listen = "127.0.0.1"
 port = 8080
 threads = 8
 
