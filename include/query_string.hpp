@@ -9,11 +9,11 @@ namespace cobble {
 namespace query_string {
 /// @brief Parses a HTTP query string and its path
 /// @param what What to parse
-/// @param path The query string's path
+/// @param path Will store the query string path
 /// @return A map with keys of the query string mapping to their values
 std::unordered_map<std::string, std::string> parse(const std::string &what,
                                                    std::filesystem::path &path);
-/// @brief Parses only a HTTP query string (i.e. forms)
+/// @brief Parses only a HTTP query string
 /// @param what What to parse
 /// @return A map with keys of the query string mapping to their values
 std::unordered_map<std::string, std::string>

@@ -30,10 +30,10 @@ struct configuration {
   /// @brief The port we listen on
   U16 listen_port;
 
-  /// @brief How many threads the server I/O context uses
+  /// @brief How many threads the server I/O context will use
   S32 threads;
 
-  /// @brief Allowed CORS origin IPv6 ranges OR allowed CORS origin URLs
+  /// @brief Allowed CORS origin IPv4/IPv6 ranges OR allowed CORS origin URLs
   std::variant<std::forward_list<std::string>, cidr_network_list> cors_entries;
 };
 
